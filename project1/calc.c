@@ -22,8 +22,7 @@ int out_len, in_len;
 
 static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t* pos) {
     int i;
-    ssize_t ret, buff_len;
-    char buff[MAX_SIZE];
+    ssize_t ret;
     out_len = 0;
     for (i = 0; i < ninp; i++) {
         int tmp;
@@ -33,14 +32,7 @@ static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t*
         else {
             tmp = operand1 * operand2[i];
         }
-        buff_len = 0;
-        while (tmp > 0) {
-            buff[buff_len++] = tmp % 10 + '0';
-            tmp /= 10;
-        }
-        while (buff_len) {
-            output[out_len++] = buff[--buff_len];
-        }
+        out_len += sprintf(output + out_len, "%d", tmp);
         if (i != ninp - 1) {
             output[out_len++] = ',';
         }
@@ -60,7 +52,7 @@ static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t*
 }
 
 static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, loff_t* pos) {
-    int i, tmp;
+    int tmp;
 
     in_len = len;
     if (in_len > MAX_SIZE)
@@ -72,13 +64,7 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
     input[in_len & (MAX_SIZE - 1)] = '\0';
     pr_info("procfile write %s\n", input);
 
-    tmp = 0;
-    for (i = 0; input[i] != '\0' && input[i] != '\n'; i++) {
-        tmp *= 10;
-        tmp += input[i] - '0';
-        pr_info("input[%d]=%d\n", i, input[i]);
-    }
-
+    sscanf(input, "%d", &tmp);
     operand1 = tmp;
     pr_info("update operand1: %d\n", operand1);
 
@@ -115,7 +101,6 @@ static void __exit proc_exit(void) {
     pr_info("/proc/%s/%s removed\n", ID, "calc");
     proc_remove(proc_dir);
     pr_info("/proc/%s removed\n", ID);
-    /* TODO */
 }
 
 module_init(proc_init);
