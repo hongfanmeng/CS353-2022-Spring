@@ -62,6 +62,12 @@ int main(void)
         }
         else {
             ungetc(c, file);
+            int len = 0;
+            while (!feof(file) && len < MAX) {
+                char ch = fgetc(file);
+                cmd[len++] = ch == 0 ? ' ' : ch;
+            }
+            cmd[len - 1] = '\0';
             fgets(cmd, MAX, file);
         }
         fclose(file);

@@ -38,6 +38,7 @@ static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t*
         }
     }
     output[out_len++] = '\n';
+    output[out_len++] = '\0';
 
     ret = out_len;
     if (*pos >= out_len || copy_to_user(ubuf, output, out_len)) {
@@ -46,7 +47,7 @@ static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t*
     }
     else {
         pr_info("procfile read %s\n", fp->f_path.dentry->d_name.name);
-        *pos += len;
+        *pos += out_len;
     }
     return ret;
 }
