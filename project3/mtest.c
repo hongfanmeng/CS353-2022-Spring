@@ -14,7 +14,7 @@ static char input[MAX_SIZE];
 static char output[MAX_SIZE];
 static int out_len;
 
-static struct page* get_page_from_task(struct task_struct* task, int addr);
+static struct page* get_page_from_task(struct task_struct* task, unsigned long addr);
 
 enum operation {
     OP_READ, OP_WRITE
@@ -39,11 +39,10 @@ static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t*
 
 static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, loff_t* pos)
 {
-    // TODO: parse the input, read/write process' memory
 
     static char operator;
     int pid, content;
-    unsigned long addr;
+    unsigned long addr, offset;
     struct task_struct* task;
     struct page* pg;
     void* p;
@@ -60,9 +59,12 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
         sscanf(input, "%c %d %lx", &operator, &pid, &addr);
         pr_info("cmd: %c, pid: %d, addr: %lx\n", operator, pid, addr);
     }
-    else {
+    else if (input[0] == 'w') {
         sscanf(input, "%c %d %lx %d", &operator, &pid, &addr, &content);
         pr_info("cmd: %c, pid: %d, addr: %lx, content: %d\n", operator, pid, addr, content);
+    }
+    else {
+        return in_len;
     }
 
     task = get_pid_task(find_vpid(pid), PIDTYPE_PID);
@@ -76,59 +78,48 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
 
     p = kmap_local_page(pg);
 
+    offset = addr & (PAGE_SIZE - 1);
     pr_info("get page of addr: %p\n", p);
+    pr_info("content addr: %p\n", (void*)(p + offset));
+    pr_info("content: %d\n", *(char*)(p + offset));
 
-    pr_info("content: %d", *(char*)(p));
-
-    kunmap_local(p);
+    if (operator == 'w') {
+        *(char*)(p + offset) = content;
+    }
+    else if (operator == 'r') {
+        sprintf(output, "%d", *(char*)(p + offset));
+        out_len = strlen(output);
+    }
 
     return in_len;
 }
 
 
-static struct page* get_page_from_task(struct task_struct* task, int addr) {
+static struct page* get_page_from_task(struct task_struct* task, unsigned long addr) {
     pgd_t* pgd;
     p4d_t* p4d;
     pud_t* pud;
     pte_t* pte;
     pmd_t* pmd;
+    struct page* page;
     unsigned long pfn;
 
-    pgd = pgd_offset(task->mm, addr); /* get the pgd entry */
-    if (pgd_none(*pgd) || pgd_bad(*pgd)) {
-        pr_info("fail to get pgd");
-        return NULL;
-    }
+    pgd = pgd_offset(task->mm, addr);
+    if (pgd_none(*pgd) || pgd_bad(*pgd)) return NULL;
 
-    // p4d = p4d_offset(pgd, addr); /* get the p4d entry */
-    // if (p4d_none(*p4d) || p4d_bad(*p4d)) {
-    //     pr_info("fail to get p4d");
-    //     return NULL;
-    // }
+    p4d = p4d_offset(pgd, addr);
+    if (p4d_none(*p4d) || p4d_bad(*p4d)) return NULL;
 
-    pud = pud_offset(pgd, addr); /* get the pud entry */
-    if (pud_none(*pud) || pud_bad(*pud)) {
-        pr_info("fail to get pud");
-        return NULL;
-    }
+    pud = pud_offset(p4d, addr);
+    if (pud_none(*pud) || pud_bad(*pud)) return NULL;
 
     pmd = pmd_offset(pud, addr);
-    if (pmd_none(*pmd) || pmd_bad(*pmd)) {
-        pr_info("fail to get pmd");
-        return NULL;
-    }
+    if (pmd_none(*pmd) || pmd_bad(*pmd)) return NULL;
 
-    pte = pte_offset_kernel(pmd, addr); /* get the pte entry */
-    if (pte_none(*pte)) {
-        pr_info("fail to get pte");
-        return NULL;
-    }
+    pte = pte_offset_kernel(pmd, addr);
+    if (pte_none(*pte)) return NULL;
 
-    pfn = pte_pfn(*pte);
-
-    // pfn = pgd_pfn(*pgd);
-
-    return pfn_to_page(pfn);
+    return pte_page(*pte);
 }
 
 static const struct proc_ops proc_ops = {

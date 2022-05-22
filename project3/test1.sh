@@ -2,4 +2,4 @@ make all
 rmmod mtest
 insmod mtest.ko
 ./mtest_test
-dmesg | tail -10
+dmesg | tail -20

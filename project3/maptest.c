@@ -21,8 +21,8 @@ static char content[] =
 
 static int proc_mmap(struct file* fp, struct vm_area_struct* vma)
 {
-    // TODO
-    return 0;
+    unsigned long size = vma->vm_end - vma->vm_start;
+    return remap_pfn_range(vma, vma->vm_start, page_to_pfn(page), size, vma->vm_page_prot);
 }
 
 static const struct proc_ops proc_ops = {
@@ -42,7 +42,11 @@ static int __init maptest_init(void)
     }
     pr_info("/proc/maptest created\n");
 
-    // TODO: allocate page and copy content
+    page = alloc_page(GFP_HIGHUSER_MOVABLE);
+
+    base = kmap_local_page(page);
+
+    memcpy(base, content, min(strlen(content), PAGE_SIZE));
 
     return 0;
 }
