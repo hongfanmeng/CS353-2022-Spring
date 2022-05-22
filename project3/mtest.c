@@ -78,9 +78,10 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
 
     pr_info("get page of addr: %p\n", p);
 
-    pr_info("content: %2x", *(char*)p);
+    pr_info("content: %d", *(char*)(p));
 
     kunmap_local(p);
+
     return in_len;
 }
 
@@ -105,27 +106,27 @@ static struct page* get_page_from_task(struct task_struct* task, int addr) {
     //     return NULL;
     // }
 
-    // pud = pud_offset(p4d, addr); /* get the pud entry */
-    // if (pud_none(*pud) || pud_bad(*pud)) {
-    //     pr_info("fail to get pud");
-    //     return NULL;
-    // }
+    pud = pud_offset(pgd, addr); /* get the pud entry */
+    if (pud_none(*pud) || pud_bad(*pud)) {
+        pr_info("fail to get pud");
+        return NULL;
+    }
 
-    // pmd = pmd_offset(pud, addr);
-    // if (pmd_none(*pmd) || pmd_bad(*pmd)) {
-    //     pr_info("fail to get pmd");
-    //     return NULL;
-    // }
+    pmd = pmd_offset(pud, addr);
+    if (pmd_none(*pmd) || pmd_bad(*pmd)) {
+        pr_info("fail to get pmd");
+        return NULL;
+    }
 
-    // pte = pte_offset_kernel(pmd, addr); /* get the pte entry */
-    // if (pte_none(*pte)) {
-    //     pr_info("fail to get pte");
-    //     return NULL;
-    // }
+    pte = pte_offset_kernel(pmd, addr); /* get the pte entry */
+    if (pte_none(*pte)) {
+        pr_info("fail to get pte");
+        return NULL;
+    }
 
-    // pfn = pte_pfn(*pte);
+    pfn = pte_pfn(*pte);
 
-    pfn = pgd_pfn(*pgd);
+    // pfn = pgd_pfn(*pgd);
 
     return pfn_to_page(pfn);
 }
