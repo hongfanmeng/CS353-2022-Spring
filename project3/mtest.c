@@ -68,12 +68,19 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
     task = get_pid_task(find_vpid(pid), PIDTYPE_PID);
     pr_info("get task of pid: %d\n", task->pid);
     pg = get_page_from_task(task, addr);
+
+    if (pg == NULL) {
+        pr_info("fail to get page");
+        return in_len;
+    }
+
     p = kmap_local_page(pg);
 
     pr_info("get page of addr: %p\n", p);
 
-    // pr_info("content: %2x", *(char*)p);
+    pr_info("content: %2x", *(char*)p);
 
+    kunmap_local(p);
     return in_len;
 }
 
@@ -87,16 +94,39 @@ static struct page* get_page_from_task(struct task_struct* task, int addr) {
     unsigned long pfn;
 
     pgd = pgd_offset(task->mm, addr); /* get the pgd entry */
-    if (pgd_none(*pgd) || pgd_bad(*pgd)) return NULL; /* check if it is accessible */
-    p4d = p4d_offset(pgd, addr); /* get the p4d entry */
-    if (p4d_none(*p4d) || p4d_bad(*p4d)) return NULL;
-    pud = pud_offset(p4d, addr); /* get the pud entry */
-    if (pud_none(*pud) || pud_bad(*pud)) return NULL;
-    pmd = pmd_offset(pud, addr);
-    pte = pte_offset_kernel(pmd, addr); /* get the pte entry */
-    if (pte_none(*pte)) return NULL;
+    if (pgd_none(*pgd) || pgd_bad(*pgd)) {
+        pr_info("fail to get pgd");
+        return NULL;
+    }
 
-    pfn = pte_pfn(*pte);
+    // p4d = p4d_offset(pgd, addr); /* get the p4d entry */
+    // if (p4d_none(*p4d) || p4d_bad(*p4d)) {
+    //     pr_info("fail to get p4d");
+    //     return NULL;
+    // }
+
+    // pud = pud_offset(p4d, addr); /* get the pud entry */
+    // if (pud_none(*pud) || pud_bad(*pud)) {
+    //     pr_info("fail to get pud");
+    //     return NULL;
+    // }
+
+    // pmd = pmd_offset(pud, addr);
+    // if (pmd_none(*pmd) || pmd_bad(*pmd)) {
+    //     pr_info("fail to get pmd");
+    //     return NULL;
+    // }
+
+    // pte = pte_offset_kernel(pmd, addr); /* get the pte entry */
+    // if (pte_none(*pte)) {
+    //     pr_info("fail to get pte");
+    //     return NULL;
+    // }
+
+    // pfn = pte_pfn(*pte);
+
+    pfn = pgd_pfn(*pgd);
+
     return pfn_to_page(pfn);
 }
 
