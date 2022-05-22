@@ -6,22 +6,23 @@
 #include <linux/slab.h>
 #include <linux/highmem.h>
 
-static struct proc_dir_entry *proc_ent;
+static struct proc_dir_entry* proc_ent;
 static struct page* page;
 static char content[] =
-    "Listen to me say thanks\n"
-    "Thanks to you, I'm warm all the time\n"
-    "I thank you\n"
-    "For being there\n"
-    "The world is sweeter\n"
-    "I want to say thanks\n"
-    "Thanks to you, love is in my heart\n"
-    "I thank you, for being there\n"
-    "To bring happiness\n";
+"Listen to me say thanks\n"
+"Thanks to you, I'm warm all the time\n"
+"I thank you\n"
+"For being there\n"
+"The world is sweeter\n"
+"I want to say thanks\n"
+"Thanks to you, love is in my heart\n"
+"I thank you, for being there\n"
+"To bring happiness\n";
 
 static int proc_mmap(struct file* fp, struct vm_area_struct* vma)
 {
     // TODO
+    return 0;
 }
 
 static const struct proc_ops proc_ops = {
