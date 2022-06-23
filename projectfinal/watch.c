@@ -7,12 +7,11 @@
 #include <linux/sched/cputime.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
+#include <linux/seq_file.h>  
 
 #define MAX_SIZE 1024
 
 static struct proc_dir_entry* proc_ent;
-static char output[MAX_SIZE];
-static int out_len;
 static struct task_struct* taskp = NULL;
 
 int test_and_clear_young(pte_t* ptep)
@@ -51,72 +50,79 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long addr) {
     return pte;
 }
 
-static ssize_t proc_read(struct file* fp, char __user* ubuf, size_t len, loff_t* pos)
+int show_stat(struct seq_file* m, void* v)
 {
-    int count; /* the number of characters to be copied */
-    u64 utime, stime;
+    u64 utime, stime, mem;
     int young;
     struct vm_area_struct* vma;
     pte_t* ptep;
-    int sum = 0;
     unsigned long addr;
+    pid_t pid;
 
 
-    if (*pos == 0 && taskp) {
-        /* a new read, update process' status */
+    if (taskp) {
+
+        // task is exit
+        if (taskp->exit_state & EXIT_TRACE) {
+            pid = taskp->pid;
+            pr_info("proc watch: task of pid %d is exit.\n", pid);
+            seq_printf(m, "-1\n");
+            return 0;
+        }
+
         // cpu usage
-        out_len = 0;
         task_cputime_adjusted(taskp, &utime, &stime);
 
-        out_len += sprintf(output + out_len, "%lld ", utime);
-        out_len += sprintf(output + out_len, "%lld ", stime);
-        out_len += sprintf(output + out_len, "\n");
+        seq_printf(m, "%lld ", utime);
+        seq_printf(m, "%lld ", stime);
+        // seq_printf(m, "\n");
 
         // memory
-
+        mem = 0;
         for (vma = taskp->mm->mmap; vma != NULL; vma = vma->vm_next) {
             for (addr = vma->vm_start; addr < vma->vm_end; addr += 4096) {
                 ptep = get_pte_from_task(taskp, addr);
                 if (!ptep)continue;
                 young = test_and_clear_young(ptep);
-                sum += young;
+                mem += young;
             }
         }
-        out_len += sprintf(output + out_len, "%d ", sum);
-        out_len += sprintf(output + out_len, "\n");
+        seq_printf(m, "%lld ", mem);
+        seq_printf(m, "\n");
     }
 
-    if (out_len - *pos > len) {
-        count = len;
-    }
-    else {
-        count = out_len - *pos;
-    }
+    return 0;
+}
 
-    pr_info("Reading the proc file\n");
-    if (copy_to_user(ubuf, output + *pos, count)) return -EFAULT;
-    *pos += count;
-
-    return count;
+static int stat_open(struct inode* inode, struct file* file)
+{
+    return single_open(file, show_stat, NULL);
 }
 
 static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, loff_t* pos)
 {
     int pid;
+    struct pid* pidp;
 
     if (*pos > 0) return -EFAULT;
     pr_info("Writing the proc file\n");
     if (kstrtoint_from_user(ubuf, len, 10, &pid)) return -EFAULT;
 
-    taskp = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
+    pidp = find_get_pid(pid);
+    if (pidp != NULL)
+        taskp = get_pid_task(pidp, PIDTYPE_PID);
 
     *pos += len;
     return len;
 }
 
+
 static const struct proc_ops proc_ops = {
-    .proc_read = proc_read,
+    .proc_open = stat_open,
     .proc_write = proc_write,
+    .proc_read = seq_read,
+    .proc_lseek = seq_lseek,
+    .proc_release = seq_release,
 };
 
 static int __init watch_init(void)

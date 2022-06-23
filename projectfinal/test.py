@@ -1,30 +1,40 @@
-import os
 import subprocess
+import os
+import time
 
-bench = open("bench.txt", "w")
-devnull = open(os.devnull, "w")
+benchmark = open("benchmark.txt", "w")
+proc = subprocess.Popen(['sysbench', '--test=cpu', 'run'], 
+                        stdout=benchmark,
+                        stderr=open(os.devnull, "w"))
 
-proc = subprocess.Popen(['sysbench', '--test=cpu', 'run'], stdout=bench, stderr=devnull)
+print(f"PID: {proc.pid}")
 
+with open("/proc/watch", "w") as f:
+    print(proc.pid, file=f)
 
-print(f"pid: {proc.pid}")
+# while process not end
+first = True
+last_utime = last_stime = last_mem = 0
+PERIOD = 0.5
+while proc.poll() is None:
 
-with open("/proc/watch","a") as watch:
-    watch.write(proc.pid)
+    with open("/proc/watch", "r") as f:
+        data = f.readline().strip()
+        if data == '-1':
+            break
+        # user time (ns)
+        utime, stime, mem = list(map(int, data.split(' ')))
+        # print(utime, stime, mem)
 
-# while True:
-#     ret = proc.poll()
-#     if ret is not None:
-#         break
+    cpu_rate = (utime - last_utime) / (PERIOD * 1e9 * int(os.sysconf('SC_CLK_TCK')))
 
-#     with open("/proc/watch", "r") as watch:
-#         utime, stime = watch.readline().split(' ')
-#         ram = watch.readline()
+    if first is True:
+        first = False
+    else:
+        print(f"cpu: {cpu_rate: .2f}%, mem: {mem * 4}B")
         
-#         print(utime, stime, ram)
+    last_utime, last_stime, last_mem = utime, stime, mem
 
-#     sleep(0.1)
+    time.sleep(PERIOD)
 
-proc.wait()
-bench.close()
-    
+benchmark.close()
