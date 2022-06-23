@@ -1,0 +1,2 @@
+umount /mnt
+rmmod romfs
