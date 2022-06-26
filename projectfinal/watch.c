@@ -28,27 +28,53 @@ int test_and_clear_young(pte_t* ptep)
     return ret;
 }
 
-static pte_t* get_pte_from_task(struct task_struct* task, unsigned long addr) {
+static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     pgd_t* pgd;
     p4d_t* p4d;
     pud_t* pud;
     pmd_t* pmd;
     pte_t* pte;
 
-    pgd = pgd_offset(task->mm, addr);
-    if (pgd_none(*pgd) || pgd_bad(*pgd)) return NULL;
+    if (!task->mm)return NULL;
 
-    p4d = p4d_offset(pgd, addr);
-    if (p4d_none(*p4d) || p4d_bad(*p4d)) return NULL;
+    pgd = pgd_offset(task->mm, vaddr);
+    // pr_info("pgd_val = 0x%lx\n", pgd_val(*pgd));
+    // pr_info("pgd_index = %lu\n", pgd_index(vaddr));
+    if (pgd_none(*pgd)) {
+        // pr_info("not mapped in pgd\n");
+        return NULL;
+    }
 
-    pud = pud_offset(p4d, addr);
-    if (pud_none(*pud) || pud_bad(*pud)) return NULL;
+    p4d = p4d_offset(pgd, vaddr);
+    // pr_info("p4d_val = 0x%lx\n", p4d_val(*p4d));
+    // pr_info("p4d_index = %lu\n", p4d_index(vaddr));
+    if (p4d_none(*p4d)) {
+        // pr_info("not mapped in p4d\n");
+        return NULL;
+    }
 
-    pmd = pmd_offset(pud, addr);
-    if (pmd_none(*pmd) || pmd_bad(*pmd)) return NULL;
+    pud = pud_offset(p4d, vaddr);
+    // pr_info("pud_val = 0x%lx\n", pud_val(*pud));
+    if (pud_none(*pud)) {
+        // pr_info("not mapped in pud\n");
+        return NULL;
+    }
 
-    pte = pte_offset_kernel(pmd, addr);
-    if (pte_none(*pte)) return NULL;
+    pmd = pmd_offset(pud, vaddr);
+    // pr_info("pmd_val = 0x%lx\n", pmd_val(*pmd));
+    // pr_info("pmd_index = %lu\n", pmd_index(vaddr));
+    if (pmd_none(*pmd)) {
+        // pr_info("not mapped in pmd\n");
+        return NULL;
+    }
+
+    pte = pte_offset_kernel(pmd, vaddr);
+    // pr_info("pte_val = 0x%lx\n", pte_val(*pte));
+    // pr_info("pte_index = %lu\n", pte_index(vaddr));
+    if (pte_none(*pte)) {
+        // pr_info("not mapped in pte\n");
+        return NULL;
+    }
 
     return pte;
 }
@@ -59,7 +85,7 @@ int show_stat(struct seq_file* m, void* v)
     int young, i;
     struct vm_area_struct* vma;
     pte_t* ptep;
-    unsigned long addr;
+    unsigned long vaddr;
     pid_t pid;
     struct task_struct* taskp;
 
@@ -76,7 +102,7 @@ int show_stat(struct seq_file* m, void* v)
         // task is exit
         if (taskp->exit_state & EXIT_TRACE) {
             pr_info("proc watch: task of pid %d is exit.\n", pid);
-            seq_printf(m, "-1\n");
+            seq_printf(m, "NULL\n");
             return 0;
         }
 
@@ -93,18 +119,22 @@ int show_stat(struct seq_file* m, void* v)
         // calc mem
         pte_count = 0;
         for (vma = taskp->mm->mmap; vma != NULL; vma = vma->vm_next) {
-            for (addr = vma->vm_start; addr < vma->vm_end; addr += 4096) {
-                ptep = get_pte_from_task(taskp, addr);
-                if (!ptep)continue;
+            // pr_info("vm_start:%p, vm_end:%p\n", vma->vm_start, vma->vm_end);
+            for (vaddr = vma->vm_start; vaddr < vma->vm_end; vaddr += PAGE_SIZE) {
+                // pr_info("vaddr:%p\n", vaddr);
+                ptep = get_pte_from_task(taskp, vaddr);
+                if (ptep == NULL)continue;
+                // pr_info("ptep:%p", ptep);
                 young = test_and_clear_young(ptep);
                 pte_count += young;
             }
         }
 
-        // print mem size, 1 pte = 4 Byte
-        seq_printf(m, "%lld ", pte_count * 4);
-        seq_printf(m, "\n");
+        pr_info("pid:%d, pte_count:%lld\n", pid, pte_count);
 
+        // print mem size, 1 pte = PAGE_SIZE Byte
+        seq_printf(m, "%lld ", pte_count * PAGE_SIZE);
+        seq_printf(m, "\n");
     }
 
     return 0;
