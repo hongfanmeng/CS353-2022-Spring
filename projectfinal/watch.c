@@ -41,7 +41,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pgd_val = 0x%lx\n", pgd_val(*pgd));
     // pr_info("pgd_index = %lu\n", pgd_index(vaddr));
     if (pgd_none(*pgd)) {
-        pr_info("not mapped in pgd\n");
+        // pr_info("not mapped in pgd\n");
         return NULL;
     }
 
@@ -49,14 +49,14 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("p4d_val = 0x%lx\n", p4d_val(*p4d));
     // pr_info("p4d_index = %lu\n", p4d_index(vaddr));
     if (p4d_none(*p4d)) {
-        pr_info("not mapped in p4d\n");
+        // pr_info("not mapped in p4d\n");
         return NULL;
     }
 
     pud = pud_offset(p4d, vaddr);
     // pr_info("pud_val = 0x%lx\n", pud_val(*pud));
     if (pud_none(*pud)) {
-        pr_info("not mapped in pud\n");
+        // pr_info("not mapped in pud\n");
         return NULL;
     }
 
@@ -64,7 +64,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pmd_val = 0x%lx\n", pmd_val(*pmd));
     // pr_info("pmd_index = %lu\n", pmd_index(vaddr));
     if (pmd_none(*pmd)) {
-        pr_info("not mapped in pmd\n");
+        // pr_info("not mapped in pmd\n");
         return NULL;
     }
 
@@ -72,7 +72,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pte_val = 0x%lx\n", pte_val(*pte));
     // pr_info("pte_index = %lu\n", pte_index(vaddr));
     if (pte_none(*pte)) {
-        pr_info("not mapped in pte\n");
+        // pr_info("not mapped in pte\n");
         return NULL;
     }
 
@@ -98,10 +98,10 @@ int show_stat(struct seq_file* m, void* v)
         pid = taskp->pid;
         seq_printf(m, "%d ", pid);
 
-        pr_info("proc watch: pid %d, status %d\n", pid, task_state_index(taskp));
+        // pr_info("proc watch: pid %d, status %d\n", pid, task_state_index(taskp));
         // task is exit
         if (taskp->exit_state & EXIT_TRACE) {
-            pr_info("proc watch: task of pid %d is exit.\n", pid);
+            // pr_info("proc watch: task of pid %d is exit.\n", pid);
             seq_printf(m, "-1\n");
             continue;
         }
@@ -114,7 +114,7 @@ int show_stat(struct seq_file* m, void* v)
         seq_printf(m, "%lld ", stime);
         // seq_printf(m, "\n");
 
-        pr_info("pid:%d, utime:%lld, stime:%lld\n", pid, utime, stime);
+        // pr_info("pid:%d, utime:%lld, stime:%lld\n", pid, utime, stime);
 
         // calc mem
         pte_count = 0;
@@ -130,7 +130,7 @@ int show_stat(struct seq_file* m, void* v)
             }
         }
 
-        pr_info("pid:%d, pte_count:%lld\n", pid, pte_count);
+        // pr_info("pid:%d, pte_count:%lld\n", pid, pte_count);
 
         // print mem size, 1 pte = PAGE_SIZE Byte
         seq_printf(m, "%lld ", pte_count * PAGE_SIZE);
@@ -158,7 +158,7 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
     input[len & (MAX_SIZE - 1)] = '\0';
     if (copy_from_user(input, ubuf, len)) return -EFAULT;
 
-    pr_info("proc watch: input %s", input);
+    // pr_info("proc watch: input %s", input);
 
     pid_cnt = 0;
     for (i = 0; i < len; i++) {
@@ -167,7 +167,7 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
             pidp = find_get_pid(pid);
             if (!pidp)continue;
             taskp_list[pid_cnt++] = get_pid_task(pidp, PIDTYPE_PID);
-            pr_info("proc watch: adding %d to pid list\n", pid);
+            // pr_info("proc watch: adding %d to pid list\n", pid);
         }
     }
 
