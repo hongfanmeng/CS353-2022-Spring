@@ -66,12 +66,13 @@ int show_stat(struct seq_file* m, void* v)
 
     for (i = 0; i < pid_cnt; i++) {
         taskp = taskp_list[i];
-        if (!taskp)continue;
+        if (!taskp || !taskp->mm)continue;
 
         // print pid
         pid = taskp->pid;
         seq_printf(m, "%d ", pid);
 
+        pr_info("proc watch: pid %d, status %d\n", pid, task_state_index(taskp));
         // task is exit
         if (taskp->exit_state & EXIT_TRACE) {
             pr_info("proc watch: task of pid %d is exit.\n", pid);
@@ -87,6 +88,8 @@ int show_stat(struct seq_file* m, void* v)
         seq_printf(m, "%lld ", stime);
         // seq_printf(m, "\n");
 
+        pr_info("pid:%d, utime:%lld, stime:%lld\n", pid, utime, stime);
+
         // calc mem
         pte_count = 0;
         for (vma = taskp->mm->mmap; vma != NULL; vma = vma->vm_next) {
@@ -101,6 +104,7 @@ int show_stat(struct seq_file* m, void* v)
         // print mem size, 1 pte = 4 Byte
         seq_printf(m, "%lld ", pte_count * 4);
         seq_printf(m, "\n");
+
     }
 
     return 0;
@@ -121,7 +125,10 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
     pr_info("Writing the proc file\n");
 
     if (len > MAX_SIZE) len = MAX_SIZE;
+    input[len & (MAX_SIZE - 1)] = '\0';
     if (copy_from_user(input, ubuf, len)) return -EFAULT;
+
+    pr_info("proc watch: input %s", input);
 
     pid_cnt = 0;
     for (i = 0; i < len; i++) {
@@ -133,7 +140,6 @@ static ssize_t proc_write(struct file* fp, const char __user* ubuf, size_t len, 
             pr_info("proc watch: adding %d to pid list\n", pid);
         }
     }
-    pr_info("to pid list.");
 
     *pos += len;
     return len;

@@ -1,10 +1,14 @@
+from re import sub
 import subprocess
 import os
 import time
 import psutil
 
 benchmark = open("benchmark.txt", "w")
-proc = subprocess.Popen(['sysbench', '--threads=4', 'cpu', 'run'],
+# proc = subprocess.Popen(['sysbench', '--threads=4', 'cpu', 'run'],
+#                         stdout=benchmark,
+#                         stderr=open(os.devnull, "w"))
+proc = subprocess.Popen(['7z', 'b'],
                         stdout=benchmark,
                         stderr=open(os.devnull, "w"))
 
@@ -12,13 +16,12 @@ print(f"PID: {proc.pid}")
 
 PERIOD = 0.5
 old_data_list = None
+output = ''
 while proc.poll() is None:
     with open("/proc/watch", "w") as f:
         out = ''
         for thread in psutil.Process(proc.pid).threads():
-            out = out + str(thread.id) + ' '
-        print(out, file=f)
-        # print(out)
+            print(out, file=f, end=' ')
 
     with open("/proc/watch", "r") as f:
         lines = f.readlines()
@@ -43,7 +46,9 @@ while proc.poll() is None:
             _, last_utime, last_stime, _ = old_data
             cpu_rate = (utime - last_utime) / \
                 (PERIOD * 1e7)
-            print(f"pid: {pid}, cpu: {cpu_rate:.2f}%, mem: {mem}B")
+            print(f"pid: {pid:5d}, cpu: {cpu_rate:6.2f}%, mem: {mem}B")
+
+            output += "pid: {pid:5d}, cpu: {cpu_rate:6.2f}%, mem: {mem}B\n"
 
     old_data_list = data_list.copy()
 
@@ -51,5 +56,7 @@ while proc.poll() is None:
 
     time.sleep(PERIOD)
 
-
 benchmark.close()
+
+with open("output.txt", "w") as f:
+    print(output, file=f)
