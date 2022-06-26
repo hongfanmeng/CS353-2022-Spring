@@ -41,7 +41,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pgd_val = 0x%lx\n", pgd_val(*pgd));
     // pr_info("pgd_index = %lu\n", pgd_index(vaddr));
     if (pgd_none(*pgd)) {
-        // pr_info("not mapped in pgd\n");
+        pr_info("not mapped in pgd\n");
         return NULL;
     }
 
@@ -49,14 +49,14 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("p4d_val = 0x%lx\n", p4d_val(*p4d));
     // pr_info("p4d_index = %lu\n", p4d_index(vaddr));
     if (p4d_none(*p4d)) {
-        // pr_info("not mapped in p4d\n");
+        pr_info("not mapped in p4d\n");
         return NULL;
     }
 
     pud = pud_offset(p4d, vaddr);
     // pr_info("pud_val = 0x%lx\n", pud_val(*pud));
     if (pud_none(*pud)) {
-        // pr_info("not mapped in pud\n");
+        pr_info("not mapped in pud\n");
         return NULL;
     }
 
@@ -64,7 +64,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pmd_val = 0x%lx\n", pmd_val(*pmd));
     // pr_info("pmd_index = %lu\n", pmd_index(vaddr));
     if (pmd_none(*pmd)) {
-        // pr_info("not mapped in pmd\n");
+        pr_info("not mapped in pmd\n");
         return NULL;
     }
 
@@ -72,7 +72,7 @@ static pte_t* get_pte_from_task(struct task_struct* task, unsigned long vaddr) {
     // pr_info("pte_val = 0x%lx\n", pte_val(*pte));
     // pr_info("pte_index = %lu\n", pte_index(vaddr));
     if (pte_none(*pte)) {
-        // pr_info("not mapped in pte\n");
+        pr_info("not mapped in pte\n");
         return NULL;
     }
 
@@ -102,8 +102,8 @@ int show_stat(struct seq_file* m, void* v)
         // task is exit
         if (taskp->exit_state & EXIT_TRACE) {
             pr_info("proc watch: task of pid %d is exit.\n", pid);
-            seq_printf(m, "NULL\n");
-            return 0;
+            seq_printf(m, "-1\n");
+            continue;
         }
 
         // cpu usage

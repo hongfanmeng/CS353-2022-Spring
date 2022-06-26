@@ -4,10 +4,8 @@ import time
 import psutil
 import math
 
-
 benchmark = open("benchmark.txt", "w")
-
-# proc = subprocess.Popen(['sysbench', '--threads=4', 'memory', 'run'],
+# proc = subprocess.Popen(['sysbench', '--threads=4', 'cpu', 'run'],
 #                         stdout=benchmark,
 #                         stderr=open(os.devnull, "w"))
 proc = subprocess.Popen(['7z', 'b'],
@@ -27,7 +25,7 @@ def convert_size(size_bytes):
     return "%s%s" % (s, size_name[i])
 
 
-PERIOD = 0.1
+PERIOD = 0.01
 lines_list = []
 counter_list = []
 while proc.poll() is None:
