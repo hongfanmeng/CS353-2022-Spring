@@ -21,7 +21,9 @@ while proc.poll() is None:
     with open("/proc/watch", "w") as f:
         out = ''
         for thread in psutil.Process(proc.pid).threads():
-            print(out, file=f, end=' ')
+            out += str(thread.id) + ' '
+
+        print(out, file=f, end='')
 
     with open("/proc/watch", "r") as f:
         lines = f.readlines()
@@ -48,7 +50,7 @@ while proc.poll() is None:
                 (PERIOD * 1e7)
             print(f"pid: {pid:5d}, cpu: {cpu_rate:6.2f}%, mem: {mem}B")
 
-            output += "pid: {pid:5d}, cpu: {cpu_rate:6.2f}%, mem: {mem}B\n"
+            output += f"pid: {pid:5d}, cpu: {cpu_rate:6.2f}%, mem: {mem}B\n"
 
     old_data_list = data_list.copy()
 

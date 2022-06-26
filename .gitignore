@@ -95,5 +95,5 @@ dkms.conf
 
 .vscode
 venv
-benchmark.txt
+*.txt
 *.asm
